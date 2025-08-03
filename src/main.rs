@@ -1,5 +1,6 @@
 use bevy::{
     color::palettes::css::*,
+    image::ImageLoaderSettings,
     pbr::{MaterialPipeline, MaterialPipelineKey},
     prelude::*,
     reflect::TypePath,
@@ -21,7 +22,7 @@ fn main() {
             MaterialPlugin::<PlanetMaterial>::default(),
             MaterialPlugin::<SpaceMaterial>::default(),
         ))
-        .insert_resource(SunDir(Dir3::from_xyz(1.0, 1.0, 1.0).unwrap()))
+        .insert_resource(SunDir(Dir3::from_xyz(1.0, 1.0, 0.0).unwrap()))
         .add_systems(Startup, setup)
         .run();
 }
@@ -38,14 +39,25 @@ fn setup(
     // planet
     commands.spawn((
         Name::new("Planet"),
-        Mesh3d(meshes.add(Sphere::new(10.).mesh().ico(4).unwrap())),
+        Mesh3d(meshes.add({
+            let mut mesh = Sphere::new(10.).mesh().ico(4).unwrap();
+            mesh.generate_tangents()
+                .expect("Failed to generate tangents.");
+            mesh
+        })),
         MeshMaterial3d(planet_materials.add(PlanetMaterial {
             sun_dir: sun_dir.0.as_vec3(),
             surface_texture_day: Some(asset_server.load("textures/8k_earth_daymap.jpg")),
             surface_texture_night: Some(asset_server.load("textures/8k_earth_nightmap.jpg")),
             cloud_texture: Some(asset_server.load("textures/8k_earth_clouds.jpg")),
-            normal_texture: Some(asset_server.load("textures/8k_earth_normal_map.tif")),
-            specular_texture: Some(asset_server.load("textures/8k_earth_specular_map.tif")),
+            normal_texture: Some(asset_server.load_with_settings(
+                "textures/8k_earth_normal_map.tif",
+                |settings: &mut ImageLoaderSettings| settings.is_srgb = false,
+            )),
+            specular_texture: Some(asset_server.load_with_settings(
+                "textures/8k_earth_specular_map.tif",
+                |settings: &mut ImageLoaderSettings| settings.is_srgb = false,
+            )),
             alpha_mode: AlphaMode::Blend,
         })),
     ));
@@ -80,7 +92,7 @@ fn setup(
     commands.spawn((
         Name::new("Camera"),
         Camera3d::default(),
-        Transform::from_xyz(0., 0., 60.).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0., 0., 50.).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 }
 
